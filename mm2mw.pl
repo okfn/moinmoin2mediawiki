@@ -1010,51 +1010,37 @@ sub ConvertToMW { # Params: MMFilePath, MMName
 #      s/((?<!)[A-Z][a-z]+[A-Z][a-z]+[A-Za-z]*)([^`])/[[$1]]$2/g;  #`# CamelCaseWord -> [[CamelCaseWord]]
 #      s/((?<!\w)[A-Z]\w*[a-z]\w*[A-Z]\w+)/[[$&]]/g;
       # 
-      ## should not occur
-      # s/\[http:(\w+)\]/[[$1]]/g;
       s/\[\[http:(\w+)[\s:|]([^\]]+)\]\]/[$1 $2]/g;
 
-      s/\[\[FullSearch(\([^)]*\))?\]\]//g;
+      s/\<\<FullSearch(\([^)]*\))?\>\>//g;
 
       s/(?<![\&!\/#])\b([A-Z][a-z0-9]+){2,}(\/([A-Z][a-z0-9]+){2,})*\b/[[$&]]/g;                   #`# CamelCaseWord -> [[CamelCaseWord]]
       s/!([A-Z][a-z]+[A-Z][a-z]+[A-Za-z]*)([^`])/$1$2/g;     #`# !CamelCaseWord -> CamelCaseWord
       s/\[\[\[(\w+)\]\]\s+(.+?)\]/[[$1|$2]]/g;               # [[[WikiPageName]] words] -> [[WikiPageName|words]]
       s/\[([^\]]+)\[\[(.*?)\]\](.*?)\]/[$1$2$3]/g;           # [...[[...]]...]   ->  [.........]  repair accidental [[CamelCasing]]
-      s/\[\[Anchor\((\w+)\)\]\]/<span id="$1"><\/span>/g;    # [[Anchor(name)]] -> <span id="name"></span>
-      # s/\[Self:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
-      # s/\[wiki:Self:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
-      # s/\[wiki:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
+      s/\<\<Anchor\((\w+)\)\>\>/<span id="$1"><\/span>/g;    # [[Anchor(name)]] -> <span id="name"></span>
       s/\<\<Include\((.*?)\)\>\>/{{:$1}}/g;                  # [[Include(OtherPage)]]  ->  {{:OtherPage}}
-#      s/\["(\w[\w\s]+\w)"\]/[[$1]]/g;                        # ["Free Link"]     ->  [[Free Link]]
       if(s/\[\[TableOfContents.*?\]\]/<!-- ! TOC here -->/g) {     # Cannot support TOC mid-text, but can put comment in.
 	  $toc = 1;
       }
-
       
     # Boilerplate Phrases
       s/This wiki is powered by \[\[MoinMoin\]\]//g;
-      s/\[\[FindPage\]\]/[[Special:Search|FindPage]]/g;
-      s(\[\[SyntaxReference\]\])(\[http://meta.wikimedia.org/wiki/Help:Editing SyntaxReference\])g;
-      s/\[\[SiteNavigation\]\]/\[\[Special:Specialpages|SiteNavigation\]\]/g;
-      s/\[\[RecentChanges\]\]/\[\[Special:Recentchanges|RecentChanges\]\]/g;
+      s/\<\<FindPage\>\>/[[Special:Search|FindPage]]/g;
+      s(\<\<SyntaxReference\>\>)(\[http://meta.wikimedia.org/wiki/Help:Editing SyntaxReference\])g;
+      s/\<\<SiteNavigation\>\>/\<\<Special:Specialpages|SiteNavigation\]\]/g;
+      s/\<\<RecentChanges\>\>/\<\<Special:Recentchanges|RecentChanges\]\]/g;
 
     # Final tidy
       s/``//g;   # NonLinkCamel``CaseWord  ->  NonLinkCamelCaseWord
-      s/\[attachment:([^\s\/]+\.(png|jpg|gif)) ([^\]]+)\]/[[Image:$mwname_\/attachments\/$1|$2]]/g;  # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
-      s/\[attachment:(\S+\.(png|jpg|gif)) ([^\]]+)\]/[[Image:$1|$2]]/g;  # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
-      s/\[attachment:([^\s\/]+\.(png|jpg|gif))\]/[[Image:$mwname_\/attachments\/$1]]/g;              # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
-      s/\[attachment:(\S+\.(png|jpg|gif))\]/[[Image:$1]]/g;              # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
-      s/\[attachment:([^\s\/]+) ([^\]]+)\]/[[Media:$mwname_\/attachments\/$1|$2]]/g;                 # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
-      s/\[attachment:(\S+) ([^\]]+)\]/[[Media:$1|$2]]/g;                 # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
-      s/\[attachment:([^\s\/]+)\]/[[Media:$mwname_\/attachments\/$1]]/g;                             # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
-      s/\[attachment:(\S+)\]/[[Media:$1]]/g;                             # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
-
-      # If there's already a slash, we don't want to add $mwname_
-      s/attachment:([^\s\/]+\.(png|jpg|gif))/[[Image:$mwname_\/attachments\/$1]]/g;               # attachment:file.png/jpg/gif  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
-      s/attachment:(\S+\.(png|jpg|gif))/[[Image:$1]]/g;                                          # attachment:file.png/jpg/gif  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
-#      s/attachment:(\S+)([,;.:!]\s)?/[[Media:$mwname_\/attachments\/$1$2]]/g;                   # attachment:file.ext  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
-      s/attachment:([^\s\/]+?)($|\s|([,;.:!]+)(\s|$))/[[Media:$mwname_\/attachments\/$1]]$2/g;
-      s/attachment:(\S+?)($|\s|([,;.:!]+)(\s|$))/[[Media:$1]]$2/g;
+      s/\{\{attachment:([^\s\/]+\.(png|jpg|gif)) ([^\]]+)\}\}/[[Image:$mwname_\/attachments\/$1|$2]]/g;  # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
+      s/\{\{attachment:(\S+\.(png|jpg|gif)) ([^\]]+)\}\}/[[Image:$1|$2]]/g;  # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
+      s/\{\{attachment:([^\s\/]+\.(png|jpg|gif))\}\}/[[Image:$mwname_\/attachments\/$1]]/g;              # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
+      s/\{\{attachment:(\S+\.(png|jpg|gif))\}\}/[[Image:$1]]/g;              # [attachment:file.png/jpg/gif]  ->  [[Image:MoinMoinPageName/attachments/file.ext]]
+      s/\{\{attachment:([^\s\/]+) ([^\]]+)\}\}/[[Media:$mwname_\/attachments\/$1|$2]]/g;                 # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
+      s/\{\{attachment:(\S+) ([^\]]+)\]/[[Media:$1|$2]]/g;                 # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
+      s/\{\{attachment:([^\s\/]+)\}\}/[[Media:$mwname_\/attachments\/$1]]/g;                             # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
+      s/\{\{attachment:(\S+)\}\}/[[Media:$1]]/g;                             # [attachment:file.ext]  ->  [[Media:MoinMoinPageName/attachments/file.ext]]
 
       # Final cleaning in case some pbs got introduced by the CamelCase regexp					    
       s/\[([^\]]+)\[\[(.*?)\]\](.*?)\]/[$1$2$3]/g;           # [...[[...]]...]   ->  [.........]  repair accidental [[CamelCasing]]
