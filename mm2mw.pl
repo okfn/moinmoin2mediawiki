@@ -974,9 +974,11 @@ sub ConvertToMW { # Params: MMFilePath, MMName
 
 
 		# Link conversion
-		s/\[\#([^\s|]+)[\s|]+([^\]]+)\]/\[\[\#$1|$2\]\]/g;     # [#Foo bar]   ->  [[#Foo|bar]]
-  		s/(?<!\[)\[\#([^\s:]+)\]/\[\[\#$1\]\]/g;                      # [# * ]   ->  [[ * ]]
-  		s/\[\"(.*?)\"\]/\[\[$1\]\]/g;                          # [" * "]  ->  [[ * ]]    (This may be covered by Free Link below)
+    ## comment these out as MoinMoin link syntax has changed since 1.5
+    ## see http://moinmo.in/HelpOnLinking
+    # s/\[\#([^\s|]+)[\s|]+([^\]]+)\]/\[\[\#$1|$2\]\]/g;     # [#Foo bar]   ->  [[#Foo|bar]]
+    #	s/(?<!\[)\[\#([^\s:]+)\]/\[\[\#$1\]\]/g;                      # [# * ]   ->  [[ * ]]
+    #	s/\[\"(.*?)\"\]/\[\[$1\]\]/g;                          # [" * "]  ->  [[ * ]]    (This may be covered by Free Link below)
                 s/\[:([^:\]]+):([^\]]+)\]/[[$1|$2]]/g;                 # [:HTML/AddedElementEmbed:embed] -> [[HTML/AddedElementEmbed|embed]]
   		s/\[\:(.*?)\]/\[\[$1\]\]/g;                            # [: * ]   ->  [[ * ]]
     
@@ -1001,12 +1003,16 @@ sub ConvertToMW { # Params: MMFilePath, MMName
       # To Do : the rest of the smileys
 
     # Wiki links
+    ## comment these out as MoinMoin link syntax has changed since 1.5
+    ## see http://moinmo.in/HelpOnLinking
       # s/\/CommentPage/???/g;                               # To Do
       s/\[\[GetText\((\w+)\)\]\]/$1/g;                       # [[GetText(xx)]] -> xx
 #      s/((?<!)[A-Z][a-z]+[A-Z][a-z]+[A-Za-z]*)([^`])/[[$1]]$2/g;  #`# CamelCaseWord -> [[CamelCaseWord]]
 #      s/((?<!\w)[A-Z]\w*[a-z]\w*[A-Z]\w+)/[[$&]]/g;
-      s/\[http:(\w+)\]/[[$1]]/g;
-      s/\[http:(\w+)[\s:|]([^\]]+)\]/[[$1|$2]]/g;
+      # 
+      ## should not occur
+      # s/\[http:(\w+)\]/[[$1]]/g;
+      s/\[\[http:(\w+)[\s:|]([^\]]+)\]\]/[$1 $2]/g;
 
       s/\[\[FullSearch(\([^)]*\))?\]\]//g;
 
@@ -1015,10 +1021,10 @@ sub ConvertToMW { # Params: MMFilePath, MMName
       s/\[\[\[(\w+)\]\]\s+(.+?)\]/[[$1|$2]]/g;               # [[[WikiPageName]] words] -> [[WikiPageName|words]]
       s/\[([^\]]+)\[\[(.*?)\]\](.*?)\]/[$1$2$3]/g;           # [...[[...]]...]   ->  [.........]  repair accidental [[CamelCasing]]
       s/\[\[Anchor\((\w+)\)\]\]/<span id="$1"><\/span>/g;    # [[Anchor(name)]] -> <span id="name"></span>
-      s/\[Self:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
-      s/\[wiki:Self:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
-      s/\[wiki:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
-      s/\[\[Include\((.*?)\)\]\]/{{:$1}}/g;                  # [[Include(OtherPage)]]  ->  {{:OtherPage}}
+      # s/\[Self:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
+      # s/\[wiki:Self:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
+      # s/\[wiki:([^\s]+)\s*(.*?)\]/[[$1|$2]]/g;               # [wiki:xxx a b c]  ->  [[xxx|a b c]]
+      s/\<\<Include\((.*?)\)\>\>/{{:$1}}/g;                  # [[Include(OtherPage)]]  ->  {{:OtherPage}}
 #      s/\["(\w[\w\s]+\w)"\]/[[$1]]/g;                        # ["Free Link"]     ->  [[Free Link]]
       if(s/\[\[TableOfContents.*?\]\]/<!-- ! TOC here -->/g) {     # Cannot support TOC mid-text, but can put comment in.
 	  $toc = 1;
