@@ -1009,8 +1009,10 @@ sub ConvertToMW { # Params: MMFilePath, MMName
       s/\[\[GetText\((\w+)\)\]\]/$1/g;                       # [[GetText(xx)]] -> xx
 #      s/((?<!)[A-Z][a-z]+[A-Z][a-z]+[A-Za-z]*)([^`])/[[$1]]$2/g;  #`# CamelCaseWord -> [[CamelCaseWord]]
 #      s/((?<!\w)[A-Z]\w*[a-z]\w*[A-Z]\w+)/[[$&]]/g;
-      # 
-      s/\[\[http:(\w+)[\s:|]([^\]]+)\]\]/[$1 $2]/g;
+      s/\[\[(http:[^\|]+)\|([^\]]+)\]\]/[$1 $2]/g;
+      s/\[\[(https:[^\|]+)\|([^\]]+)\]\]/[$1 $2]/g;
+      s/\[\[(http:[^\|]+)\]\]/$1/g;
+      s/\[\[(https:[^\|]+)\]\]/$1/g;
 
       s/\<\<FullSearch(\([^)]*\))?\>\>//g;
 
