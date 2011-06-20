@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+	<title>moinmoin to mediawiki migration guide</title>
+      <link rel="stylesheet" href="http://www.w3.org/StyleSheets/generic-base-1" type=
+      "text/css" />
+      <link rel="stylesheet" href="http://www.w3.org/StyleSheets/activities" type=
+      "text/css" />
+    <style type="text/css">
+    /*<![CDATA[*/
+      <!--
+       body { margin: 1em 10%; color: black; background-color: white; }
+      -->
+    /*]]>*/
+    </style>
+	
+</head>
+
+<body>
+<h1>    <a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/WWW/w3c_home" alt="W3C" border=
+    "0" /></a>
+    Moinmoin to Mediawiki migration Manual</h1>
+<p>This guide is a collection of notes taken during the migration of some W3C wikis from the moinmoin to mediawiki engine when consolidating our wiki services under a single platform. Moinmoin and mediawiki are both excellent wiki platforms: use the one that works for you, and if you wish to migrate from the former to the latter, feel free to use or hack on our migration script, but at your own risks. This guide, just like the software, are provided <em>as is</em> and without warranty.</p> 
+
+<p>We will take as example the migration of a moinmoin wiki codenamed "foo" e.g for foo located at http://www.w3.org/2008/foo/wiki/. The following instructions are rather specific to the W3C setup but may be fairly easily adapted to any case.</p>
+
+<h2> temporarily relocate the moinmoin wiki to a different URI</h2>
+
+<p>… e.g /2008/foo/wiki2/. This is necessary because the migration script talks to mediawiki via HTTP. Therefore, the mediawiki engine needs to be online and at its final URI before the migration can be made.</p>
+<p>(the following is w3c-wiki-specific, since our moinmoin system uses a farm of wikis)
+<ol> <li>edit /etc/moin/farmconfig.py: change URI regexp to r"/2008/foo/wiki2"<br />
+     (remove the www.w3.org part)</li>
+     <li> edit /etc/apache2/sites-available/esw.w3.org<br />
+     ・ change the ScriptAlias URI<br />
+     ・ remove the part below about allow, deny (which is used to make sure only www.w3.org mirrors access the system)<br />
+     </li>
+     <li>/etc/apache2/sites-available/esw.w3.org, temporarily comment out  
+the jubjub/esw "redirects" used to keep URI space under www.w3.org</li>
+    <li>restart apache. test the temporary wiki URI with e.g lynx http://localhost/2008/foo/wiki2/</li>
+</ol>
+<h2>Create the mediawiki instance, and test it</h2>
+<p>We have <a href="http://www.w3.org/Systems/Wiki">W3C-specific instructions</a>, but others can find
+    a vanilla guide over at <a href="http://www.mediawiki.org/wiki/Installation">mediawiki.org</a></p>
+<p>Make sure that php on the server is given enough memory, and, if you are going to migrate moinmoin attachments/uploads, make sure to enable it in php, and to increase the upload size limit: this will save you trouble later.</p>
+<pre>
+    max_execution_time = 60     ; Maximum execution time of each script, in seconds
+    max_input_time = 100 ; Maximum amount of time each script may spend parsing request data
+    memory_limit = 32M      ; Maximum amount of memory a script may consume (16MB)
+;…
+    ; Temporary directory for HTTP uploaded files (will use system default if not
+    ; specified).
+    upload_tmp_dir = /tmp/http
+;…
+    ; Maximum allowed size for uploaded files.
+    upload_max_filesize = 6M
+</pre>
+<p>For W3C wikis, any access-control in moinmoin needs to be mirrored in the mediawiki config.</p>
+
+<p>Now, create a user on the mediawiki. Use Special:Userrights to make sure  
+that this user has high credentials (or use the Sysop user). Check whether attachments are enabled via the <kbd>LocalConfig.php</kbd></p>
+
+<h2>Proceed with the migration</h2>
+<p>It will be assumed that you have downloaded the <a href="http://dev.w3.org/cvsweb/2008/moinmoin2mediawiki/">script</a>
+into <kbd>~/moinmoin2mediawiki/bin</kbd> and that the moinmoin data for the wiki is in <kbd>/u/wiki/foo/data/</kbd> Now go to <kbd>~/moinmoin2mediawiki</kbd>, and run:</p>
+<pre>
+perl ./bin/mm2mw.pl
+
+#type the following
+#  make sure to use the wiki's actual URI for "url"
+#  and use the temporary location of the moinmoin wiki
+src /u/wiki/foo/data/
+dst ./data-out/foo
+url http://localhost/2008/foo/wiki/index.php
+mmurl http://localhost/2008/foo/wiki2/
+analyse
+login
+#(here you'll be prompted for login info for the sysop user)
+convert
+upload
+</pre>
+
+<p>... The new mediawiki should be all set. You can now go back and reset  
+the apache2 config appropriately... remove the temporary stuff for the  
+moinmoin instance... and communicate with the users about their "new"  
+wiki</p>
+
+
+
+</body>
+</html>
