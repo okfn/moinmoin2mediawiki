@@ -168,6 +168,8 @@ use File::Path;
 use File::Copy;
 use LWP::UserAgent;
 use HTTP::Request::Common;
+use Data::Dumper;
+use XML::LibXML;
 
 #########################################################################################################################
 
@@ -176,7 +178,7 @@ my $datapath = './mywiki/data'; # The data directory at the root of the tarball
 my $targetpath = './mywiki-mw';    # Destination folder for generated MediaWiki pages
 my $testpage; # If defined, this will be the only page processed
 my $moinmoinurlbase = 'http://www.w3.org/YYYY/GroupName/wiki/';
-my $serverindexurl = 'http://test.example.com/mediawiki/index.php';
+my $serverindexurl = 'http://mywiki.ex'; # skip index.php and so on. It is added automatically if needed.
 my $splitsize = 1000000; # 1Mb approx split size. Anwhere up to 1Mb is reasonable.
 my $MaxXmlSize = '25000000'; # Limit, as per form on the Special:Import page  NOTE: Make this as big as possible on the MW server. (edit php.ini)
 my @extensions = ('png', 'jpg', 'gif', 'pdf'); # Extensions that can be uploaded to MediaWiki (This feature not used, yet.)
@@ -1145,29 +1147,45 @@ sub LogIn { # Params: MediaWikiURL
 sub LogInToServer { # Params: MediaWikiURL,username,password
   my $wikiurl = shift;
  	my %params = ();
-	$params{'wpName'} = shift;
-	$params{'wpPassword'} = shift;
-	$params{'wpLoginattempt'} = 'Log in';
-        $params{'wpDomain'} = 'W3C Accounts';
+	$params{'lgname'} = shift;
+	$params{'lgpassword'} = shift;
+	$params{'action'} = 'login';
+	$params{'format'} = 'xml';
 	my $response = $ua->request(
-		POST "$wikiurl?title=Special:Userlogin&action=submitlogin" ,
+		POST "$wikiurl/api.php" ,
 		Content_Type => 'application/x-www-form-urlencoded' ,
 		Content => [ %params ]
 	);
 	$loggedIn = 0;
-	foreach (keys %{$response->{'_headers'}}) {
-		if ($_ =~ /^set-cookie$/i) { # server attempting to set a cookie
-			my $a = $response->{'_headers'}->{$_};
-			if ($a =~ /^ARRAY(.+)$/) {
-				foreach (@{$a}) {
-					if (/UserID=\d+\;/i) {
-						$loggedIn = 1; # Success!
-            last;
-					}
-				}
-			}
-		}
-	}
+#	print Data::Dumper->Dump([$response], [qw(response)]);
+	my $dom = XML::LibXML->load_xml(string => $response->{'_content'});
+#	print $dom->toStringHTML();
+	my $node = $dom->findnodes("//login")->get_node(1);
+#	print $node->getAttribute('result');
+#	print "\n";
+	my $loginResult = $node->getAttribute('result');
+	
+	
+	if ($loginResult eq 'NeedToken') {
+		print "Need token...\n";
+		$params{'lgtoken'} = $node->getAttribute('token');
+		my $response = $ua->request(
+			POST "$wikiurl/api.php" ,
+			Content_Type => 'application/x-www-form-urlencoded' ,
+			Content => [ %params ]
+		);
+#		print Data::Dumper->Dump([$response], [qw(response)]);
+		$dom = XML::LibXML->load_xml(string => $response->{'_content'});
+#		print $dom->toStringHTML();
+		$node = $dom->findnodes("//login")->get_node(1);
+		$loginResult = $node->getAttribute('result');
+	}	
+
+	if ($loginResult eq 'Success') {
+		$loggedIn = 1;
+		print "success\n";
+	} 
+	
 	return $loggedIn;
 }
 
@@ -1248,26 +1266,55 @@ sub UploadAttachmentToServer { # Params: WikiURL,FilePath,MWName,Comment
 	my $filepath = shift;
 	my $mwname   = shift;
 	my $comment  = shift;
+	
 	my $response = $ua->request(
-		POST "$wikiurl/Special:Upload",
+		POST "$wikiurl/api.php",
 		Content_Type => 'multipart/form-data',
-    	Content =>
+		Content =>
 			[
-                 wpUploadFile        => [$filepath, $mwname],
-                 wpSourceType        => 'file',
-                 wpDestfile          => $mwname,
-                 wpUploadDescription => $comment,
-                 wpIgnoreWarning     => 'true',
-                 wpUpload            => 'Upload file'
+                 action        => 'query',
+                 prop        => 'info',
+                 intoken => 'edit',
+                 titles     => 'Main Page',
+                 format=>'xml'
 			]
 	);
-	if ($response->is_success) {
-		printResults($response->content);
-		return 1; # Success
+	
+#	print Data::Dumper->Dump([$response], [qw(response)]);
+
+	my $dom = XML::LibXML->load_xml(string => $response->{'_content'});
+#	print $dom->toStringHTML();
+	my $node = $dom->findnodes("//page")->get_node(1);
+	my $editToken = $node->getAttribute('edittoken');
+#	print "EditToken: ";
+#	print $editToken;
+#	print "\n";
+
+	$response = $ua->request(
+		POST "$wikiurl/api.php",
+		Content_Type => 'multipart/form-data',
+		Content =>
+			[
+                 action        => 'upload',
+                 token => $editToken,
+                 format=>'xml',
+                 filename=>$mwname,
+                 comment=>$comment,
+                 file        => [$filepath]
+			]
+	);
+	
+#	print Data::Dumper->Dump([$response], [qw(response)]);
+#	print $response->{'_content'};
+	$dom = XML::LibXML->load_xml(string => $response->{'_content'});
+	my $node = $dom->findnodes("//upload")->get_node(1);
+	if (($node) && ($node->getAttribute('result') eq 'Success'))
+	{
+		return 1;
 	}
-	else {
-		return 0;
-	}
+	
+	return 0;
+	
 }
 
 sub UploadXmlToServer { # Params: WikiURL,XmlFilePath
@@ -1282,23 +1329,51 @@ sub UploadXmlToServer { # Params: WikiURL,XmlFilePath
 	my $wikiurl  = shift;
 	my $filepath = shift;
 	my $mwname   = shift;
+	
 	my $response = $ua->request(
-		POST "$wikiurl/Special:Import",
+		POST "$wikiurl/api.php",
 		Content_Type => 'multipart/form-data',
-    	Content =>
+		Content =>
 			[
-                 action        => 'submit',
-                 source        => 'upload',
-                 MAX_FILE_SIZE => $MaxXmlSize,
-                 xmlimport     => [$filepath]
+                 action        => 'query',
+                 prop        => 'info',
+                 intoken => 'import',
+                 titles     => 'Main Page',
+                 format=>'xml'
 			]
 	);
-	if ($response->is_success) {
-	    printResults($response->content);
-	    return 1;
-	} else {
-	    return 0;
+	
+#	print Data::Dumper->Dump([$response], [qw(response)]);
+
+	my $dom = XML::LibXML->load_xml(string => $response->{'_content'});
+#	print $dom->toStringHTML();
+	my $node = $dom->findnodes("//page")->get_node(1);
+	my $importToken = $node->getAttribute('importtoken');
+	print "ImportToken: ";
+	print $importToken;
+	print "\n";
+	
+	$response = $ua->request(
+		POST "$wikiurl/api.php",
+		Content_Type => 'multipart/form-data',
+		Content =>
+			[
+                 action        => 'import',
+                 token => $importToken,
+                 format=>'xml',
+                 xml        => [$filepath]
+			]
+	);
+	
+#	print Data::Dumper->Dump([$response], [qw(response)]);
+#	print $response->{'_content'};
+	$dom = XML::LibXML->load_xml(string => $response->{'_content'});
+	if ($dom->findnodes("//page")->size() > 0)
+	{
+		return 1;
 	}
+	
+	return 0;
 }
 
 # Upload XML and attachments to server
