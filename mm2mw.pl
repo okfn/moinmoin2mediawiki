@@ -1160,7 +1160,7 @@ sub LogInToServer { # Params: MediaWikiURL,username,password
 #	print Data::Dumper->Dump([$response], [qw(response)]);
 	my $dom = XML::LibXML->load_xml(string => $response->{'_content'});
 #	print $dom->toStringHTML();
-	my $node = $dom->findnodes("//login")->get_node(1);
+	my $node = $dom->findnodes("//login[\@result]")->get_node(1);
 #	print $node->getAttribute('result');
 #	print "\n";
 	my $loginResult = $node->getAttribute('result');
