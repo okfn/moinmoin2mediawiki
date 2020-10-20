@@ -4,7 +4,7 @@
 # =========================================================================================
 #  (c) Copyright 2007, 2008 by Rotan Hanrahan (rotan A T ieee D O T org)
 # 
-#  W3C® SOFTWARE NOTICE AND LICENSE
+#  W3CÂ® SOFTWARE NOTICE AND LICENSE
 #  http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231
 #
 #  This work (and included software, documentation such as READMEs, or other related items)
@@ -1177,7 +1177,7 @@ sub LogInToServer { # Params: MediaWikiURL,username,password
 #		print Data::Dumper->Dump([$response], [qw(response)]);
 		$dom = XML::LibXML->load_xml(string => $response->{'_content'});
 #		print $dom->toStringHTML();
-		$node = $dom->findnodes("//login")->get_node(1);
+		$node = $dom->findnodes("//login[\@result]")->get_node(1);
 		$loginResult = $node->getAttribute('result');
 	}	
 
@@ -1435,10 +1435,10 @@ __END__
 # Wiki page folder name is the name of the wiki page
 # Filename may contain ...(xx)... embedded hex character.
 #  Example: AideD(27)Administration = AideD'Administration
-#  Example: AideAuxD(c3a9)veloppeurs = AideAuxDéveloppeurs
-#  Example: AideDeL(27c389)dition(2f)SousPages = AideDeL(27)(c389)dition(2f)SousPages = AideDeL'Édition.SousPages
+#  Example: AideAuxD(c3a9)veloppeurs = AideAuxDÃ©veloppeurs
+#  Example: AideDeL(27c389)dition(2f)SousPages = AideDeL(27)(c389)dition(2f)SousPages = AideDeL'Ã‰dition.SousPages
 # The "." (2f) is a path delimiter for wiki subpages.
-#  Example: AideDeL'Édition.SousPages = AideDeL'Édition/SousPages
+#  Example: AideDeL'Ã‰dition.SousPages = AideDeL'Ã‰dition/SousPages
 #  Note: The MediaWiki equivalents will just have "/" in the name. They will not be true subpages.
 # The "_" is used to represent a space in the wiki page name.
 # Note how some hex codes are 2 hex digits, while others are 4 hex digits. How are these decoded?
