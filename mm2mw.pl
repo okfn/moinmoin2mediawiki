@@ -179,6 +179,7 @@ my $targetpath = './mywiki-mw';    # Destination folder for generated MediaWiki 
 my $testpage; # If defined, this will be the only page processed
 my $moinmoinurlbase = 'http://www.w3.org/YYYY/GroupName/wiki/';
 my $serverindexurl = 'http://mywiki.ex'; # skip index.php and so on. It is added automatically if needed.
+my $interwiki = 'SomeWiki';
 my $splitsize = 1000000; # 1Mb approx split size. Anwhere up to 1Mb is reasonable.
 my $MaxXmlSize = '25000000'; # Limit, as per form on the Special:Import page  NOTE: Make this as big as possible on the MW server. (edit php.ini)
 my @extensions = ('png', 'jpg', 'gif', 'pdf'); # Extensions that can be uploaded to MediaWiki (This feature not used, yet.)
@@ -304,6 +305,11 @@ while (defined(my $command = <STDIN>)) {
 		       $moinmoinurlbase =~ s/\/$//;
 		       print "  mmURL = $moinmoinurlbase\n";
 		   }
+		   elsif ($command =~ /^(interwiki)(\s+(\S+))?/i) {
+			   if (defined $3) { $interwiki = $3; }
+			   $interwiki =~ s/\/$//;
+			   print "  interwiki = $interwiki\n";
+		   }
 		   elsif ($command =~ /^split(\s+(\d+))?$/i) {
 		       if (defined $2) { $splitsize = $2; }
 		       print "  Split XML files at approx $splitsize bytes\n";
@@ -393,6 +399,7 @@ while (defined(my $command = <STDIN>)) {
 	print "  dst   = $targetpath\n";
 	print "  URL   = $serverindexurl\n";
 	print "  mmURL = $moinmoinurlbase\n";
+	print "  interwiki = $interwiki\n";
 	print "  Split = $splitsize\n";
 	if (defined $analysed) {
 	    print "  Analysis:\n";
@@ -1168,7 +1175,22 @@ sub LogInToServer { # Params: MediaWikiURL,username,password
 	
 	if ($loginResult eq 'NeedToken') {
 		print "Need token...\n";
-		$params{'lgtoken'} = $node->getAttribute('token');
+		my %tkparams = (
+			action => 'query',
+			meta => 'tokens',
+			type => 'login',
+			format => 'xml'
+		);
+		my $response = $ua->request(
+			POST "$wikiurl/api.php" ,
+			Content_Type => 'application/x-www-form-urlencoded' ,
+			Content => [ %tkparams ]
+		);
+		my $dom = XML::LibXML->load_xml(string => $response->{'_content'});
+		my $node = $dom->findnodes("//tokens[\@logintoken]")->get_node(1);
+
+		$params{'lgtoken'} = $node->getAttribute('logintoken');
+		print "Got token\n";
 		my $response = $ua->request(
 			POST "$wikiurl/api.php" ,
 			Content_Type => 'application/x-www-form-urlencoded' ,
@@ -1177,7 +1199,7 @@ sub LogInToServer { # Params: MediaWikiURL,username,password
 #		print Data::Dumper->Dump([$response], [qw(response)]);
 		$dom = XML::LibXML->load_xml(string => $response->{'_content'});
 #		print $dom->toStringHTML();
-		$node = $dom->findnodes("//login")->get_node(1);
+		$node = $dom->findnodes("//login[\@result]")->get_node(1);
 		$loginResult = $node->getAttribute('result');
 	}	
 
@@ -1359,6 +1381,7 @@ sub UploadXmlToServer { # Params: WikiURL,XmlFilePath
 		Content =>
 			[
                  action        => 'import',
+                 interwikiprefix     => $interwiki,
                  token => $importToken,
                  format=>'xml',
                  xml        => [$filepath]
