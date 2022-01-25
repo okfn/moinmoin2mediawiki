@@ -1295,9 +1295,7 @@ sub UploadAttachmentToServer { # Params: WikiURL,FilePath,MWName,Comment
 		Content =>
 			[
                  action        => 'query',
-                 prop        => 'info',
-                 intoken => 'edit',
-                 titles     => 'Main Page',
+                 meta => 'tokens',
                  format=>'xml'
 			]
 	);
@@ -1306,8 +1304,8 @@ sub UploadAttachmentToServer { # Params: WikiURL,FilePath,MWName,Comment
 
 	my $dom = XML::LibXML->load_xml(string => $response->{'_content'});
 #	print $dom->toStringHTML();
-	my $node = $dom->findnodes("//page")->get_node(1);
-	my $editToken = $node->getAttribute('edittoken');
+	my $node = $dom->findnodes("//tokens")->get_node(1);
+	my $editToken = $node->getAttribute('csrftoken');
 #	print "EditToken: ";
 #	print $editToken;
 #	print "\n";
